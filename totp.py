@@ -49,24 +49,22 @@ def generate_secret(size):
   return str(sk)
 
 def save_secret(s):
-  f = open("secret.txt", "w")
+  f = open("secret.txt", "wb")
   print("saving secret: ", s)
-  f.write(str(s))
+  f.write(s)
   f.close()
 
 def read_secret():
-  f = open("secret.txt","r")
-  secret = f.readline()
+  f = open("secret.txt","rb")
+  secret = f.read()
   f.close()
-  return str(secret)
+  return secret
 
 def encrypt_secret(s,p):
   salt = os.urandom(16) 
-  print(type(salt))
   #save salt
-  salt_file = open("salt.txt","w")
-  salt_file.write(str(salt))
-  print("esalt:",str(salt))
+  salt_file = open("salt.txt","wb")
+  salt_file.write(salt)
   salt_file.close()
   kdf = PBKDF2HMAC(
     algorithm=hashes.SHA256(),
@@ -74,37 +72,38 @@ def encrypt_secret(s,p):
     salt=salt,
     iterations=390000
   ) 
-  key = base64.urlsafe_b64encode(kdf.derive(bytes(p,'UTF-8')))
+  key = base64.urlsafe_b64encode(kdf.derive(p))
   f = Fernet(key)
+  print('enc salt: ',salt)
   return f.encrypt(s)
 
 def decrypt_secret(p):
   print(p)
-  salt_file = open('salt.txt', 'r')
+  salt_file = open('salt.txt', 'rb')
   salt = salt_file.read()
-  print("salt:",salt)
   salt_file.close()
   enc_content = read_secret()
+  print("dec salt: ", salt)
   kdf = PBKDF2HMAC(
     algorithm=hashes.SHA256(),
     length=32,
     salt=salt,
     iterations=390000
   )
-  key = base64.urlsafe_b64encode(kdf.derive(bytes(p,'UTF-8')))
+  key = base64.urlsafe_b64encode(kdf.derive(p))
   f = Fernet(key)
   print("enc_content:",enc_content)
-  print("conv: ", bytes(enc_content,'UTF-8'))
-  return f.decrypt(bytes(enc_content,'UTF-8'))
+  dec_content = f.decrypt(enc_content)
+  return dec_content
 
 try:
   if sys.argv[1] == '--generate-qr':
     secret = generate_secret(16)
     #encrypt secret
     password = bytes(sys.argv[3], 'UTF-8')
-    enc_token = encrypt_secret(secret,password)
-    print("enc_token:",enc_token)
-    save_secret(enc_token.decode('UTF-8'))
+    enc_token = encrypt_secret(bytes(secret,'UTF-8'),password)
+    print("enc_token:",bytes(enc_token.decode('UTF-8'),'UTF-8'))
+    save_secret(enc_token)
     msg_uri = "otpauth://totp/Example:johnsal@oregonstate.edu?secret="
     msg_uri += secret
     msg_uri += "&issuer=Example"
