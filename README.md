@@ -34,7 +34,7 @@ Implementation tldr:
 
 First, a QR code is generated with a password in step 1. The 
 password is required to encrypt the secret given to GA. There 
-is no option to get a QR code generated that in unencrypted.
+is no option to get a QR code generated that is unencrypted.
 
 The secret is stored in 'secret.txt' as encrypted text.
 

@@ -12,7 +12,6 @@ Alvin Johns
 
 import sys
 import segno
-import random
 import string
 import time
 import math
@@ -21,6 +20,9 @@ import hashlib
 import base64
 import struct
 import os
+# using due to warning label at:
+# https://docs.python.org/3/library/random.html
+import secrets 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -34,14 +36,21 @@ def hotp(secret,time_step):
   h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
   return h
 
+# low probability bug where hotp() returns a string < 6.
+# fix: prepend with 0 and if still less than 6, append a 0.
+#   Other option is to disregard the shorter key until a new
+#   code is generated during the next 30second cycle.
 def totp(secret):
   x = str(hotp(secret, time_step=int(time.time())//30))
   if len(x) < 6:
     x = '0' + x
+    if len(x) < 6:
+      x = x + '0'
   return x
 
 def generate_secret(size):
-  sk = ''.join([random.choice(string.ascii_uppercase) for n in range(size)])
+  base64 = string.ascii_uppercase + '234567'
+  sk = ''.join([secrets.choice(base64) for n in range(size)])
   return str(sk)
 
 def save_secret(s):
@@ -94,7 +103,7 @@ try:
     password = bytes(sys.argv[3], 'UTF-8')
     enc_token = encrypt_secret(bytes(secret,'UTF-8'),password)
     save_secret(enc_token)
-    msg_uri = "otpauth://totp/Example:johnsal@oregonstate.edu?secret="
+    msg_uri = "otpauth://totp/Example:all@things.com?secret="
     msg_uri += secret
     msg_uri += "&issuer=Example"
     qrcode = segno.make(msg_uri)
