@@ -5,7 +5,7 @@
 Imports used:
 	import sys
 	import segno
-	import random
+	import secrets
 	import string
 	import time
 	import math
