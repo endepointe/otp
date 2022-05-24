@@ -25,23 +25,19 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-GENQR = False
-GETOTP = False
-
 # create hmac-sha1 signature
-def hotp(secret,intervals_no):
+def hotp(secret,time_step):
   key = base64.b32decode(secret, False)
-  msg = struct.pack(">Q", intervals_no)
+  msg = struct.pack(">Q", time_step)
   h = hmac.new(key,msg,hashlib.sha1).digest()
   o = o = h[19] & 15
   h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
   return h
 
 def totp(secret):
-  x = str(hotp(secret, intervals_no=int(time.time())//30))
+  x = str(hotp(secret, time_step=int(time.time())//30))
   if len(x) < 6:
-    while len(x) < 6:
-      x = str(hotp(secret, intervals_no=int(time.time())//30))
+    x = '0' + x
   return x
 
 def generate_secret(size):
@@ -50,7 +46,6 @@ def generate_secret(size):
 
 def save_secret(s):
   f = open("secret.txt", "wb")
-  print("saving secret: ", s)
   f.write(s)
   f.close()
 
@@ -74,16 +69,13 @@ def encrypt_secret(s,p):
   ) 
   key = base64.urlsafe_b64encode(kdf.derive(p))
   f = Fernet(key)
-  print('enc salt: ',salt)
   return f.encrypt(s)
 
 def decrypt_secret(p):
-  print(p)
   salt_file = open('salt.txt', 'rb')
   salt = salt_file.read()
   salt_file.close()
   enc_content = read_secret()
-  print("dec salt: ", salt)
   kdf = PBKDF2HMAC(
     algorithm=hashes.SHA256(),
     length=32,
@@ -92,7 +84,6 @@ def decrypt_secret(p):
   )
   key = base64.urlsafe_b64encode(kdf.derive(p))
   f = Fernet(key)
-  print("enc_content:",enc_content)
   dec_content = f.decrypt(enc_content)
   return dec_content
 
@@ -102,7 +93,6 @@ try:
     #encrypt secret
     password = bytes(sys.argv[3], 'UTF-8')
     enc_token = encrypt_secret(bytes(secret,'UTF-8'),password)
-    print("enc_token:",bytes(enc_token.decode('UTF-8'),'UTF-8'))
     save_secret(enc_token)
     msg_uri = "otpauth://totp/Example:johnsal@oregonstate.edu?secret="
     msg_uri += secret
