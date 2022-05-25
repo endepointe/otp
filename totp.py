@@ -30,10 +30,18 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 # create hmac-sha1 signature
 def hotp(secret,time_step):
   key = base64.b32decode(secret, False)
+  #print("key: ", key)
   msg = struct.pack(">Q", time_step)
+  #print("msg: ", msg)
   h = hmac.new(key,msg,hashlib.sha1).digest()
-  o = o = h[19] & 15
+  #print("h: ", h)
+  o = h[19] & 15
+  #print("o: ", o)
+  #print("h[o:o+4]: ", h[o:o+4])
+  #print("struct.unpack('>I',h[o:o+4])[0]",(struct.unpack(">I", h[o:o+4])[0]))
+  #print("struct.unpack('>I',h[o:o+4])[0]",(struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000)
   h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
+  #print("h: ", h)
   return h
 
 # low probability bug where hotp() returns a string < 6.
